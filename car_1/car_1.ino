@@ -222,50 +222,50 @@ void setup() {
 
 void loop() {
 
-//  if (!isScanning){
-//    headCount++;
-//    if (headAngle != 90){
-//      headAngle = 90;
-//      head.write(headAngle);
-//    }
-//    if (headCount > 10 && vel != 0){
-//      isScanning = true;
-//      if (headDirection > 0) {
-//        leftDistance = MAX_DISTANCE;
-//      } else {
-//        rightDistance = MAX_DISTANCE;
-//      }
-//    }
-//  } else {
-//    if (headAngle >= MAX_HEAD_ANGLE || headAngle <= MIN_HEAD_ANGLE){
-//      headDirection *= -1;
-//    }
-//    headAngle += (HEAD_SPEED * headDirection);
-//    head.write(headAngle);
-//
-//    if (headAngle == 90){
-//      isScanning = false;
-//      headCount = 0;
-//    }    
-//  }
+  if (!isScanning){
+    headCount++;
+    if (headAngle != 90){
+      headAngle = 90;
+      head.write(headAngle);
+    }
+    if (headCount > 10 && vel != 0){
+      isScanning = true;
+      if (headDirection > 0) {
+        leftDistance = MAX_DISTANCE;
+      } else {
+        rightDistance = MAX_DISTANCE;
+      }
+    }
+  } else {
+    if (headAngle >= MAX_HEAD_ANGLE || headAngle <= MIN_HEAD_ANGLE){
+      headDirection *= -1;
+    }
+    headAngle += (HEAD_SPEED * headDirection);
+    head.write(headAngle);
+
+    if (headAngle == 90){
+      isScanning = false;
+      headCount = 0;
+    }    
+  }
 
 //  Serial.print("Angle: ");
 //  Serial.println(headAngle);
   delay(15);
-//  byte distance = detectDistance();
-//  if (isScanning){
-//    if (headAngle < 80){
-//      if (distance < leftDistance){
-//        leftDistance = distance;
-//      }
-//    } else if (headAngle > 100) {
-//      if (distance < rightDistance){
-//        rightDistance = distance;
-//      }
-//    } else {
-//      frontDistance = distance;
-//    }
-//  }
+  byte distance = detectDistance();
+  if (isScanning){
+    if (headAngle < 80){
+      if (distance < leftDistance){
+        leftDistance = distance;
+      }
+    } else if (headAngle > 100) {
+      if (distance < rightDistance){
+        rightDistance = distance;
+      }
+    } else {
+      frontDistance = distance;
+    }
+  }
   
   if (irrecv.decode(&results)){
 //      Serial.print("IR key: ");
@@ -328,40 +328,40 @@ void loop() {
 //  Serial.print(" leftDistance: ");
 //  Serial.println(rightDistance);
   
-//  if (vel > 0){
-//   if (leftDistance < 15){
-//      turnLeftForward();
-//      leftDistance = MAX_DISTANCE;
-//      head.write(90);
-//      delay(50);
-//    } else if (rightDistance < 10){
-//      turnRightForward();
-//      rightDistance = MAX_DISTANCE;
-//      head.write(90);
-//      delay(50);
-//    } if (frontDistance < 10){
-//      byte oldVel = vel;
-//      vel = MIN_SPEED;
-//      moveBackward();
-//      delay(200);
-//      moveStop();
-//      fullScan();
-//      bool shouldSpinLeft = leftDistance > rightDistance && leftDistance > 5;
-//      byte spinCounter = 0;
-//      while(frontDistance < 10 && spinCounter++ < 5){
-//        if(shouldSpinLeft){
-//          spinLeft();
-//        } else {
-//          spinRight();
-//        }
-//       frontDistance = detectDistance();
-//      }
-//      if (spinCounter >= 5){
-//        moveStop();
-//      } else {
-//        vel = oldVel;
-//        moveForward();
-//      }
-//    }
-//  }
+  if (vel > 0){
+   if (leftDistance < 15){
+      turnLeftForward();
+      leftDistance = MAX_DISTANCE;
+      head.write(90);
+      delay(50);
+    } else if (rightDistance < 10){
+      turnRightForward();
+      rightDistance = MAX_DISTANCE;
+      head.write(90);
+      delay(50);
+    } if (frontDistance < 10){
+      byte oldVel = vel;
+      vel = MIN_SPEED;
+      moveBackward();
+      delay(200);
+      moveStop();
+      fullScan();
+      bool shouldSpinLeft = leftDistance > rightDistance && leftDistance > 5;
+      byte spinCounter = 0;
+      while(frontDistance < 10 && spinCounter++ < 5){
+        if(shouldSpinLeft){
+          spinLeft();
+        } else {
+          spinRight();
+        }
+       frontDistance = detectDistance();
+      }
+      if (spinCounter >= 5){
+        moveStop();
+      } else {
+        vel = oldVel;
+        moveForward();
+      }
+    }
+  }
 }
