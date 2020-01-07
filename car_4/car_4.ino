@@ -2,19 +2,19 @@
 #include <Servo.h>
 #include "remote_control.h"
 
-#define DIR_1_L_PIN      2    //Motor direction
-#define DIR_2_L_PIN      4    //Motor direction
+#define DIR_1_L_PIN      2    // Motor direction
+#define DIR_2_L_PIN      4    // Motor direction
 #define SPEED_L_PIN      6    // Needs to be a PWM pin to be able to control motor speed
-#define DIR_1_R_PIN      7    //Motor direction
-#define DIR_2_R_PIN      8    //Motor direction
+#define DIR_1_R_PIN      7    // Motor direction
+#define DIR_2_R_PIN      8    // Motor direction
 #define SPEED_R_PIN      5    // Needs to be a PWM pin to be able to control motor speed
-
-//#define IR_PORT          3
 
 #define ECHO_PIN         11   // Ultrasonic Echo pin connect to D11
 #define TRIG_PIN         12   // Ultrasonic Trig pin connect to D12
 
 #define SERVO_PIN        9    //servo connect to D9
+
+#define IR_PORT          3    // IR Port
 
 #define MIN_MOVING_SPEED  90
 #define MAX_MOVING_SPEED  250
@@ -59,7 +59,7 @@ byte headAngle = 90;
 byte delayHeadCounter = 0;
 
 // IR
-//IRrecv irrecv(IR_PORT);
+IRrecv irrecv(IR_PORT);
 decode_results irResults;
 unsigned long lastSelectedKey = 0;
 
@@ -88,6 +88,7 @@ void moveForward(void) {
   digitalWrite(DIR_2_R_PIN, LOW);
   movingStatus = MOVING_FORWARD;
   delayMovingCounter = 0;
+  Serial.println("forward");
 }
 
 void moveBackward() {
@@ -98,6 +99,7 @@ void moveBackward() {
     digitalWrite(DIR_2_R_PIN, HIGH);
     movingStatus = MOVING_BACKWARD;
     delayMovingCounter = 0;
+    Serial.println("backward");
 }
 
 void moveStop() {
@@ -109,6 +111,7 @@ void moveStop() {
     movingStatus = MOVING_STOPPED;
     vel = 0;
     delayMovingCounter = 0;
+    Serial.println("stop");
 }
 
 void spinLeft() {
@@ -119,6 +122,7 @@ void spinLeft() {
     digitalWrite(DIR_2_R_PIN, HIGH);
     movingStatus = SPINNING_LEFT;
     delayMovingCounter = 0;
+    Serial.println("left");
 }
 
 void spinRight() {
@@ -129,6 +133,7 @@ void spinRight() {
     digitalWrite(DIR_2_R_PIN, LOW);
     movingStatus = SPINNING_RIGHT;
     delayMovingCounter = 0;
+    Serial.println("right");
 }
 
 void turnLeftForward() {
@@ -170,44 +175,6 @@ void turnRightBackward() {
     movingStatus = MOVING_BACKWARD_RIGHT;
     delayMovingCounter = 0;
 }
-
-//byte readIrKey(){
-//  if (irrecv.decode(&irResults)){
-//      if (irResults.value == 0XFFFFFFFF || irResults.value == 0XFF) {
-//          irrecv.resume();
-//          if (*irResults.rawbuf < 1000){
-//            return 0;
-//          } else {
-//            return lastSelectedKey;
-//          }
-//      }
-//      switch(irResults.value){
-//        case IR_KEY_UP_1:
-//        case IR_KEY_UP_2:
-//          lastSelectedKey = KEY_UP;
-//          break;
-//        case IR_KEY_DOWN_1:
-//        case IR_KEY_DOWN_2:
-//          lastSelectedKey = KEY_DOWN;
-//          break;
-//        case IR_KEY_RIGHT_1:
-//        case IR_KEY_RIGHT_2:
-//          lastSelectedKey = KEY_RIGHT;
-//          break;
-//        case IR_KEY_LEFT_1:
-//        case IR_KEY_LEFT_2:
-//          lastSelectedKey = KEY_LEFT;
-//          break;
-//        case IR_KEY_STOP_1:
-//        case IR_KEY_STOP_2:
-//          lastSelectedKey = KEY_STOP;
-//          break;
-//      }
-//      irrecv.resume();
-//      return lastSelectedKey;
-//  }
-//  return 0;
-//}
 
 void accelerate(int increment){
   vel += increment;
@@ -336,12 +303,88 @@ void doActionFromKey(int irKey){
   }
 }
 
+byte readIrKey(){
+  if (irrecv.decode(&irResults)){
+      if (irResults.value == 0XFFFFFFFF || irResults.value == 0XFF) {
+          irrecv.resume();
+          if (*irResults.rawbuf < 1000){
+            return 0;
+          } else {
+            return lastSelectedKey;
+          }
+      }
+      switch(irResults.value){
+        case IR_KEY_UP_1:
+        case IR_KEY_UP_2:
+          lastSelectedKey = KEY_UP;
+          break;
+        case IR_KEY_DOWN_1:
+        case IR_KEY_DOWN_2:
+          lastSelectedKey = KEY_DOWN;
+          break;
+        case IR_KEY_RIGHT_1:
+        case IR_KEY_RIGHT_2:
+          lastSelectedKey = KEY_RIGHT;
+          break;
+        case IR_KEY_LEFT_1:
+        case IR_KEY_LEFT_2:
+          lastSelectedKey = KEY_LEFT;
+          break;
+        case IR_KEY_STOP_1:
+        case IR_KEY_STOP_2:
+          lastSelectedKey = KEY_STOP;
+          break;
+      }
+      irrecv.resume();
+      return lastSelectedKey;
+  }
+  return 0;
+}
+
+#define MAX_PACKETSIZE 32    //Serial receive buffer
+char buffUART[MAX_PACKETSIZE];
+unsigned int buffUARTIndex = 0;
+unsigned long preUARTTick = 0;
+
+byte readCommand() {
+  if(Serial.available()) {
+    size_t len = Serial.available();
+    blink();
+    uint8_t sbuf[len + 1];
+    sbuf[len] = 0x00;
+    Serial.readBytes(sbuf, len);
+    switch(sbuf[0]){
+      case 49:
+        return KEY_UP;
+      case 50:
+        return KEY_DOWN;
+      case 51:
+        return KEY_LEFT;
+      case 52:
+        return KEY_RIGHT;
+      case 53:
+        return KEY_STOP;
+      case 54:
+        return KEY_STOP;
+    }    
+  }
+  return 0;
+}
+
+void blink(){
+  digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on 
+  delay(200);                       // wait for half a second
+  digitalWrite(LED_BUILTIN, LOW);    // turn the LED off 
+}
+
 void setup() {
   Serial.begin(9600);
 
+  pinMode(LED_BUILTIN, OUTPUT);
+
   // Init IR
-//  irrecv.enableIRIn();
-//  irrecv.blink13(true);
+  irrecv.enableIRIn();
+  irrecv.blink13(true);
 
   // Init Servo
   head.attach(SERVO_PIN); 
@@ -356,16 +399,24 @@ void setup() {
   pinMode(DIR_2_R_PIN, OUTPUT); 
   pinMode(SPEED_R_PIN, OUTPUT);
 
+  pinMode(TRIG_PIN, OUTPUT); 
+  pinMode(ECHO_PIN, INPUT); 
+
   moveStop();
 
   for (byte i = 0; i <= HEAD_STEPS; i++) distances[i] = MAX_DISTANCE;
 }
 
-void loop() {
+void hitSomething(){
+  moveStop();
+}
 
+void loop() {
   // IR Key
-//  int irKey = readIrKey();
-//  doActionFromKey(irKey);
+  int cmdKey = readIrKey();
+  doActionFromKey(cmdKey);
+  cmdKey = readCommand();
+  doActionFromKey(cmdKey);
 
   // Head
   moveHead();
@@ -374,7 +425,7 @@ void loop() {
   if (movingStatus == MOVING_FORWARD || movingStatus == MOVING_FORWARD_RIGHT || movingStatus == MOVING_FORWARD_LEFT) {
     byte distance = detectDistance();
     distances[headAngle / HEAD_SPEED] = distance;
-    byte hitDistance = 0;
+    byte hitDistance = 0; 
     if (headAngle >= 70 && headAngle <= 110){
       float proportionalVel = (float) (vel - MIN_MOVING_SPEED) / (float) MOVING_SPEED_DIFF;
       hitDistance = MIN_MOVING_DISTANCE + (MOVING_DISTANCE_DIFF * proportionalVel);
@@ -383,7 +434,7 @@ void loop() {
       hitDistance = MIN_MOVING_DISTANCE;
     }
     if (distance < hitDistance){
-      moveStop();
+      hitSomething();
     }    
   }
   

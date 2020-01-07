@@ -1,15 +1,12 @@
-#include <IRremote.h>
 #include <Servo.h>
 #include "remote_control.h"
 
-#define DIR_1_L_PIN      2    //Motor direction
-#define DIR_2_L_PIN      4    //Motor direction
+#define DIR_1_L_PIN      2    // Motor direction
+#define DIR_2_L_PIN      4    // Motor direction
 #define SPEED_L_PIN      6    // Needs to be a PWM pin to be able to control motor speed
-#define DIR_1_R_PIN      7    //Motor direction
-#define DIR_2_R_PIN      8    //Motor direction
+#define DIR_1_R_PIN      7    // Motor direction
+#define DIR_2_R_PIN      8    // Motor direction
 #define SPEED_R_PIN      5    // Needs to be a PWM pin to be able to control motor speed
-
-//#define IR_PORT          3
 
 #define ECHO_PIN         11   // Ultrasonic Echo pin connect to D11
 #define TRIG_PIN         12   // Ultrasonic Trig pin connect to D12
@@ -59,8 +56,6 @@ byte headAngle = 90;
 byte delayHeadCounter = 0;
 
 // IR
-//IRrecv irrecv(IR_PORT);
-decode_results irResults;
 unsigned long lastSelectedKey = 0;
 
 // Moving
@@ -170,44 +165,6 @@ void turnRightBackward() {
     movingStatus = MOVING_BACKWARD_RIGHT;
     delayMovingCounter = 0;
 }
-
-//byte readIrKey(){
-//  if (irrecv.decode(&irResults)){
-//      if (irResults.value == 0XFFFFFFFF || irResults.value == 0XFF) {
-//          irrecv.resume();
-//          if (*irResults.rawbuf < 1000){
-//            return 0;
-//          } else {
-//            return lastSelectedKey;
-//          }
-//      }
-//      switch(irResults.value){
-//        case IR_KEY_UP_1:
-//        case IR_KEY_UP_2:
-//          lastSelectedKey = KEY_UP;
-//          break;
-//        case IR_KEY_DOWN_1:
-//        case IR_KEY_DOWN_2:
-//          lastSelectedKey = KEY_DOWN;
-//          break;
-//        case IR_KEY_RIGHT_1:
-//        case IR_KEY_RIGHT_2:
-//          lastSelectedKey = KEY_RIGHT;
-//          break;
-//        case IR_KEY_LEFT_1:
-//        case IR_KEY_LEFT_2:
-//          lastSelectedKey = KEY_LEFT;
-//          break;
-//        case IR_KEY_STOP_1:
-//        case IR_KEY_STOP_2:
-//          lastSelectedKey = KEY_STOP;
-//          break;
-//      }
-//      irrecv.resume();
-//      return lastSelectedKey;
-//  }
-//  return 0;
-//}
 
 void accelerate(int increment){
   vel += increment;
@@ -356,16 +313,50 @@ void setup() {
   pinMode(DIR_2_R_PIN, OUTPUT); 
   pinMode(SPEED_R_PIN, OUTPUT);
 
+  pinMode(TRIG_PIN, OUTPUT); 
+  pinMode(ECHO_PIN, INPUT); 
+
   moveStop();
 
   for (byte i = 0; i <= HEAD_STEPS; i++) distances[i] = MAX_DISTANCE;
+}
+
+
+#define MAX_PACKETSIZE 32    //Serial receive buffer
+char buffUART[MAX_PACKETSIZE];
+unsigned int buffUARTIndex = 0;
+unsigned long preUARTTick = 0;
+
+byte readCommand() {
+  if(Serial.available()) {
+    size_t len = Serial.available();
+    uint8_t sbuf[len + 1];
+    sbuf[len] = 0x00;
+    Serial.readBytes(sbuf, len);
+    Serial.println(sbuf[0]);
+    switch(sbuf[0]){
+      case 50:
+        return KEY_UP;
+      case 56:
+        return KEY_DOWN;
+      case 52:
+        return KEY_LEFT;
+      case 54:
+        return KEY_RIGHT;
+      case 53:
+        return KEY_STOP;
+    }    
+  }
+  return 0;
 }
 
 void loop() {
 
   // IR Key
 //  int irKey = readIrKey();
-//  doActionFromKey(irKey);
+
+  int cmdKey = readCommand();
+  doActionFromKey(cmdKey);
 
   // Head
   moveHead();
@@ -373,6 +364,7 @@ void loop() {
   // Distance
   if (movingStatus == MOVING_FORWARD || movingStatus == MOVING_FORWARD_RIGHT || movingStatus == MOVING_FORWARD_LEFT) {
     byte distance = detectDistance();
+    Serial.println(distance);
     distances[headAngle / HEAD_SPEED] = distance;
     byte hitDistance = 0;
     if (headAngle >= 70 && headAngle <= 110){
